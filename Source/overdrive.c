@@ -4,8 +4,8 @@ extern uint16_t pot[];
 extern uint8_t sw[];
 
 static float lpf1(float,float);
-static float hpf1(float,float);
 static float lpf2(float,float);
+static float hpf1(float,float);
 static float hpf2(float,float);
 static float potVol1(uint16_t,float,float);
 static float potVol2(uint16_t,float,float);
@@ -16,7 +16,7 @@ float overdrive(float x)
   x = lpf1(x, 4000.0f);
   x = 5.0f * x;
 
-  if (x < -0.5f) x = -0.5f; // 2ŽŸŠÖ”‚É‚æ‚é”gŒ`‚Ì”ñ‘ÎÌ•ÏŒ`
+  if (x < -0.5f) x = -0.25f; // 2ŽŸŠÖ”‚É‚æ‚é”gŒ`‚Ì”ñ‘ÎÌ•ÏŒ`
   else x = x * x + x;
 
   x = hpf2(x, 10.0f);
@@ -39,7 +39,17 @@ float lpf1(float x,float fc)
 {
   static float y1 = 0.0f;
   float a1 = lpfCoef(fc);
-  float b0 = 1.0f - a1 ;
+  float b0 = 1.0f - a1;
+  float y = b0 * x + a1 * y1;
+  y1 = y;
+  return y;
+}
+
+float lpf2(float x,float fc)
+{
+  static float y1 = 0.0f;
+  float a1 = lpfCoef(fc);
+  float b0 = 1.0f - a1;
   float y = b0 * x + a1 * y1;
   y1 = y;
   return y;
@@ -50,7 +60,7 @@ float hpf1(float x,float fc)
   static float x1 = 0.0f;
   static float y1 = 0.0f;
   float a1 = lpfCoef(fc);
-  float b0 = 0.5f * ( 1.0f + a1 );
+  float b0 = 0.5f * (1.0f + a1);
   float y = b0 * x - b0 * x1 + a1 * y1;
   x1 = x;
   y1 = y;
@@ -62,19 +72,9 @@ float hpf2(float x,float fc)
   static float x1 = 0.0f;
   static float y1 = 0.0f;
   float a1 = lpfCoef(fc);
-  float b0 = 0.5f * ( 1.0f + a1 );
+  float b0 = 0.5f * (1.0f + a1);
   float y = b0 * x - b0 * x1 + a1 * y1;
   x1 = x;
-  y1 = y;
-  return y;
-}
-
-float lpf2(float x,float fc)
-{
-  static float y1 = 0.0f;
-  float a1 = lpfCoef(fc);
-  float b0 = 1.0f - a1 ;
-  float y = b0 * x + a1 * y1;
   y1 = y;
   return y;
 }

@@ -471,7 +471,6 @@ void HAL_I2SEx_TxRxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
     // エフェクト処理後、値を制限（-32768～+32767の範囲へ戻すため）
     yl[j] = fmaxf(fminf(bypass(xl[j]), 0.99997f), -1.0f);
   }
-
 }
 
 /* USER CODE END 4 */
