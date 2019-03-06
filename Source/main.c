@@ -130,6 +130,9 @@ int main(void)
   HAL_I2SEx_TransmitReceive_DMA(&hi2s2,(uint16_t*)TX_BUFFER,(uint16_t*)RX_BUFFER,BLOCK_SIZE*2);
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)pot, 6);
 
+  // 割り込みが受信と送信で2回発生しないよう片方の割り込みを無効化
+  HAL_NVIC_DisableIRQ(DMA1_Stream4_IRQn);
+
   // I2Sのフレームエラー発生の場合、ソフトリセットを繰り返す
   HAL_Delay(300);
   if (__HAL_I2S_GET_FLAG(&hi2s2, I2S_FLAG_FRE)) NVIC_SystemReset();
@@ -382,17 +385,13 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA1_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 3, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-
-  // 割り込みが2回発生しないようコメントアウト
-  // CubeMXでコード出力すると元に戻るので注意
   /* DMA1_Stream4_IRQn interrupt configuration */
-  //HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 3, 0);
-  //HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
-
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
