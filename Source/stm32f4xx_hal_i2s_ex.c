@@ -873,6 +873,8 @@ static void I2SEx_TxRxDMACplt(DMA_HandleTypeDef *hdma)
 {
   I2S_HandleTypeDef *hi2s = (I2S_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
 
+  HAL_I2SEx_TxRxCpltCallback(hi2s); // ←追加！CubeMXでコード出力すると元に戻るので注意
+
   /* if DMA is configured in DMA_NORMAL mode */
   if (hdma->Init.Mode == DMA_NORMAL)
   {
