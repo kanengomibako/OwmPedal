@@ -210,11 +210,11 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /**Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /**Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -228,7 +228,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /**Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -267,7 +267,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
@@ -285,7 +285,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
@@ -294,7 +294,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 2;
@@ -302,7 +302,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_2;
   sConfig.Rank = 3;
@@ -310,7 +310,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_3;
   sConfig.Rank = 4;
@@ -318,7 +318,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = 5;
@@ -326,7 +326,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
   sConfig.Channel = ADC_CHANNEL_7;
   sConfig.Rank = 6;
@@ -441,35 +441,31 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-// I2Sの受信バッファに半分データがたまったときの割り込み
-void HAL_I2SEx_TxRxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
+void processing(int i)
 {
   static float xl[BLOCK_SIZE] = {}; // Lch float計算用受信データ Rchは未使用
   static float yl[BLOCK_SIZE] = {}; // Lch float計算済送信データ
 
-  /* データ送受信 --------------------*/
-  for (int i = 0; i < BLOCK_SIZE; i++)
-  {
-    // 受信データを計算用データ配列へ 値を-1～+1(float)へ変更
-    xl[i] = (float) RX_BUFFER[i*2] / 32768.0f;
+  // 受信データを計算用データ配列へ 値を-1～+1(float)へ変更
+  xl[i] = (float) RX_BUFFER[i*2] / 32768.0f;
 
-    // 計算済データを送信バッファへ（境目がうまくいかないため1サンプルずらす）
-    // 値は-32768～+32767(16ビット整数)へ戻す
-    if (i < BLOCK_SIZE - 1) TX_BUFFER[i*2+2] = 32768.0f * yl[i];
-    else TX_BUFFER[0] = 32768.0f * yl[i]; // i: BLOCK_SIZE-1
-  }
+  // エフェクト処理後、値を制限
+  yl[i] = fmaxf(fminf(bypass(xl[i]), 0.99997f), -1.0f);
 
-  /* エフェクト処理 ------------------*/
-  for (int i = 0; i < BLOCK_SIZE; i++)
-  {
-    // 真ん中のデータから処理するため順番を入れ替える
-    // 例：ブロックサイズ32だと処理順番が16→31、0→15となる
-    int j = i + BLOCK_SIZE / 2;
-    if (j >= BLOCK_SIZE) j = j - BLOCK_SIZE;
+  // 計算済データを送信バッファへ 値を32ビット整数へ戻す
+  TX_BUFFER[i*2] = 32768.0f * yl[i];
+}
 
-    // エフェクト処理後、値を制限（-32768～+32767の範囲へ戻すため）
-    yl[j] = fmaxf(fminf(bypass(xl[j]), 0.99997f), -1.0f);
-  }
+// I2Sの受信バッファに半分データがたまったときの割り込み
+void HAL_I2SEx_TxRxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+  for (int i = 0; i < BLOCK_SIZE/2; i++) processing(i);
+}
+
+// I2Sの受信バッファに全データがたまったときの割り込み
+void HAL_I2SEx_TxRxCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+  for (int i = BLOCK_SIZE/2; i < BLOCK_SIZE; i++) processing(i);
 }
 
 /* USER CODE END 4 */
