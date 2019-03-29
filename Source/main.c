@@ -86,8 +86,8 @@ static void MX_I2S2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-volatile int16_t RX_BUFFER[BLOCK_SIZE*2] = {}; // 受信バッファ
-volatile int16_t TX_BUFFER[BLOCK_SIZE*2] = {}; // 送信バッファ
+volatile int32_t RX_BUFFER[BLOCK_SIZE*2] = {}; // 受信バッファ
+volatile int32_t TX_BUFFER[BLOCK_SIZE*2] = {}; // 送信バッファ
 volatile uint16_t pot[6] = {}; // ポット読取値
 volatile uint8_t sw[4] = {};   // スイッチオン・オフ状態
 
@@ -358,7 +358,7 @@ static void MX_I2S2_Init(void)
   hi2s2.Instance = SPI2;
   hi2s2.Init.Mode = I2S_MODE_SLAVE_TX;
   hi2s2.Init.Standard = I2S_STANDARD_PHILIPS;
-  hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B_EXTENDED;
+  hi2s2.Init.DataFormat = I2S_DATAFORMAT_32B;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
   hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_48K;
   hi2s2.Init.CPOL = I2S_CPOL_LOW;
@@ -441,19 +441,26 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+// DMA用に上位16ビットと下位16ビットを入れ替える
+// 負の値の場合に備えて右シフトの場合0埋めする
+int32_t swap16(int32_t x)
+{
+  return (0x0000FFFF & x >> 16) | x << 16;
+}
+
 void processing(int i)
 {
   static float xl[BLOCK_SIZE] = {}; // Lch float計算用受信データ Rchは未使用
   static float yl[BLOCK_SIZE] = {}; // Lch float計算済送信データ
 
   // 受信データを計算用データ配列へ 値を-1～+1(float)へ変更
-  xl[i] = (float) RX_BUFFER[i*2] / 32768.0f;
+  xl[i] = (float) swap16(RX_BUFFER[i*2]) / 2147483648.0f;
 
   // エフェクト処理後、値を制限
   yl[i] = fmaxf(fminf(bypass(xl[i]), 0.99997f), -1.0f);
 
   // 計算済データを送信バッファへ 値を32ビット整数へ戻す
-  TX_BUFFER[i*2] = 32768.0f * yl[i];
+  TX_BUFFER[i*2] = swap16(2147483648.0f * yl[i]);
 }
 
 // I2Sの受信バッファに半分データがたまったときの割り込み
