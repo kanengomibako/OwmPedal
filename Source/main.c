@@ -138,7 +138,7 @@ int main(void)
   if (__HAL_I2S_GET_FLAG(&hi2s2, I2S_FLAG_FRE)) NVIC_SystemReset();
 
   // 基板上のLED点灯（起動確認）
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, SET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   // スイッチ用カウンタ
   uint32_t swcount[4] = {};
